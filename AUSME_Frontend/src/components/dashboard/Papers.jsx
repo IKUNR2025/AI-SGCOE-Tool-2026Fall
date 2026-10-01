@@ -12,9 +12,38 @@ function Papers() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [selected, setSelected] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+
+    function handleBlankClick(event) {
+        if (event.target === event.currentTarget) {
+            setDetailOpen(false);
+            setSelected(null);
+        }
+    }
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        function handlePageClick(event) {
+            if (!(event.target instanceof Element)) return;
+
+            const protectedArea = event.target.closest(
+                "[data-paper-card], [data-paper-details], input, select, button, a"
+            );
+
+            if (!protectedArea) {
+                setDetailOpen(false);
+                setSelected(null);
+            }
+        }
+
+        document.addEventListener("click", handlePageClick);
+
+        return () => {
+            document.removeEventListener("click", handlePageClick);
+        };
+    }, []);
 
     useEffect(() => {
         fetch(`${API_BASE}/researchers/`)
@@ -70,7 +99,9 @@ function Papers() {
         return () => controller.abort();
     }, [search, researcher, page]);
 
+
     async function showDetails(id) {
+        setDetailOpen(true);
         setDetailLoading(true);
         setSelected(null);
         setError("");
@@ -92,7 +123,10 @@ function Papers() {
     }
 
     return (
-        <div style={{ padding: "40px", maxWidth: "1400px", margin: "auto" }}>
+        <div
+            style={{ padding: "40px", maxWidth: "1400px", margin: "auto" }}
+            onClick={handleBlankClick}
+        >
             <h1>Research Papers</h1>
 
             <div style={filterStyle}>
@@ -128,15 +162,30 @@ function Papers() {
 
             <p>{totalCount} papers found</p>
 
-            <div style={layoutStyle}>
-                <div style={{ flex: 1, minWidth: "300px" }}>
+            <div style={layoutStyle} onClick={handleBlankClick}>
+                <div
+                    style={{ flex: 1, minWidth: "300px" }}
+                    onClick={handleBlankClick}
+                >
+                    <div
+                        onClick={handleBlankClick}
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: detailOpen
+                                ? "minmax(0, 1fr)"
+                                : "repeat(2, minmax(0, 1fr))",
+                            gap: "15px",
+                            alignItems: "start",
+                        }}
+                    >
                     {loading ? (
                         <p>Loading papers...</p>
                     ) : (
                         papers.map((paper) => (
                             <div
                                 key={paper.id}
-                                style={cardStyle}
+                                data-paper-card
+                                style={{ ...cardStyle, marginBottom: 0 }}
                                 onClick={() => showDetails(paper.id)}
                             >
                                 <h3>{paper.title}</h3>
@@ -159,6 +208,8 @@ function Papers() {
                         ))
                     )}
 
+                    </div>
+
                     <div style={paginationStyle}>
                         <button
                             disabled={page <= 1 || loading}
@@ -178,11 +229,15 @@ function Papers() {
                     </div>
                 </div>
 
-                <div style={{ flex: 1, minWidth: "320px" }}>
+                {detailOpen && (
+                <div
+                    style={{ flex: 2, minWidth: "320px" }}
+                    onClick={handleBlankClick}
+                >
                     {detailLoading && <p>Loading paper details...</p>}
 
                     {selected && (
-                        <div style={cardStyle}>
+                        <div data-paper-details style={cardStyle}>
                             <h2>{selected.title}</h2>
 
                             <p>
@@ -243,6 +298,7 @@ function Papers() {
                         <p>Select a paper to view its details.</p>
                     )}
                 </div>
+                )}
             </div>
         </div>
     );

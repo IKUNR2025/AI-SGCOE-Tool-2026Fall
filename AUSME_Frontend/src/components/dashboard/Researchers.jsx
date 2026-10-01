@@ -6,9 +6,31 @@ function Researchers() {
     const [researchers, setResearchers] = useState([]);
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        function handlePageClick(event) {
+            if (!(event.target instanceof Element)) return;
+
+            const protectedArea = event.target.closest(
+                "[data-researcher-card], [data-researcher-details], input, select, button, a"
+            );
+
+            if (!protectedArea) {
+                setDetailOpen(false);
+                setSelected(null);
+            }
+        }
+
+        document.addEventListener("click", handlePageClick);
+
+        return () => {
+            document.removeEventListener("click", handlePageClick);
+        };
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -46,6 +68,7 @@ function Researchers() {
     }, [search]);
 
     async function showDetails(auid) {
+        setDetailOpen(true);
         setDetailLoading(true);
         setSelected(null);
         setError("");
@@ -69,7 +92,15 @@ function Researchers() {
     }
 
     return (
-        <div style={{ padding: "40px", maxWidth: "1200px", margin: "auto" }}>
+        <div
+           style={{ padding: "40px", maxWidth: "1200px", margin: "auto" }}
+           onClick={(event) => {
+               if (event.target === event.currentTarget) {
+                   setDetailOpen(false);
+                   setSelected(null);
+               }
+            }}
+         > 
             <h1>Researchers</h1>
 
             <input
@@ -88,12 +119,32 @@ function Researchers() {
                 <p>{researchers.length} researchers found</p>
             )}
 
-            <div style={layoutStyle}>
-                <div style={{ flex: 1, minWidth: "280px" }}>
-                    {researchers.map((researcher) => (
+        <div
+            style={layoutStyle}
+            onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                    setDetailOpen(false);
+                    setSelected(null);
+                }
+            }}
+        >
+            <div
+               style={{
+                   flex: 1,
+                   minWidth: "280px",
+                   display: "grid",
+                   gridTemplateColumns: detailOpen
+                       ? "minmax(0, 1fr)"
+                       : "repeat(2, minmax(0, 1fr))",
+                   gap: "15px",
+                   alignContent: "start",
+               }}
+            >
+    {researchers.map((researcher) => (
                         <div
                             key={researcher.auid}
-                            style={cardStyle}
+                            data-researcher-card
+                            style={{ ...cardStyle, marginBottom: 0 }}
                             onClick={() => showDetails(researcher.auid)}
                         >
                             <h3>{researcher.name}</h3>
@@ -103,11 +154,12 @@ function Researchers() {
                     ))}
                 </div>
 
+           {detailOpen && (
                 <div style={{ flex: 2, minWidth: "320px" }}>
                     {detailLoading && <p>Loading details...</p>}
 
                     {selected && (
-                        <div style={cardStyle}>
+                        <div data-researcher-details style={cardStyle}>
                             <h2>{selected.name}</h2>
 
                             <p><strong>Title:</strong> {selected.title || "Not available"}</p>
@@ -161,6 +213,7 @@ function Researchers() {
                         <p>Select a researcher to view details.</p>
                     )}
                 </div>
+            )}
             </div>
         </div>
     );

@@ -11,9 +11,31 @@ function Opportunities() {
     const [totalCount, setTotalCount] = useState(0);
 
     const [selected, setSelected] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        function handlePageClick(event) {
+            if (!(event.target instanceof Element)) return;
+
+            const protectedArea = event.target.closest(
+                "[data-opportunity-card], [data-opportunity-details], input, select, button, a"
+            );
+
+            if (!protectedArea) {
+                setDetailOpen(false);
+                setSelected(null);
+            }
+        }
+
+        document.addEventListener("click", handlePageClick);
+
+        return () => {
+            document.removeEventListener("click", handlePageClick);
+        };
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -59,6 +81,7 @@ function Opportunities() {
     }, [search, page]);
 
     async function showDetails(id) {
+        setDetailOpen(true);
         setDetailLoading(true);
         setSelected(null);
         setError("");
@@ -110,6 +133,7 @@ function Opportunities() {
                     setSearch(e.target.value);
                     setPage(1);
                     setSelected(null);
+                    setDetailOpen(false);
                 }}
                 style={inputStyle}
             />
@@ -120,13 +144,28 @@ function Opportunities() {
 
             <div style={layoutStyle}>
                 <div style={{ flex: 1, minWidth: "300px" }}>
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: detailOpen
+                                ? "minmax(0, 1fr)"
+                                : "repeat(2, minmax(0, 1fr))",
+                            gap: "15px",
+                            alignItems: "start",
+                        }}
+                    >
                     {loading ? (
                         <p>Loading opportunities...</p>
                     ) : (
                         opportunities.map((opportunity) => (
                             <div
                                 key={opportunity.opp_id}
-                                style={cardStyle}
+                                data-opportunity-card
+                                style={{
+                                    ...cardStyle,
+                                    marginBottom: 0,
+                                    cursor: "pointer",
+                                }}
                                 onClick={() => showDetails(opportunity.opp_id)}
                             >
                                 <h3>{opportunity.title}</h3>
@@ -154,12 +193,15 @@ function Opportunities() {
                         ))
                     )}
 
+                    </div>
+
                     <div style={paginationStyle}>
                         <button
                             disabled={page <= 1 || loading}
                             onClick={() => {
                                 setPage(page - 1);
                                 setSelected(null);
+                                setDetailOpen(false);
                             }}
                         >
                             Previous
@@ -172,6 +214,7 @@ function Opportunities() {
                             onClick={() => {
                                 setPage(page + 1);
                                 setSelected(null);
+                                setDetailOpen(false);
                             }}
                         >
                             Next
@@ -179,11 +222,12 @@ function Opportunities() {
                     </div>
                 </div>
 
-                <div style={{ flex: 1, minWidth: "320px" }}>
+                {detailOpen && (
+                <div style={{ flex: 2, minWidth: "320px" }}>
                     {detailLoading && <p>Loading opportunity details...</p>}
 
                     {selected && (
-                        <div style={cardStyle}>
+                        <div data-opportunity-details style={cardStyle}>
                             <h2>{selected.title}</h2>
 
                             <p><strong>Agency:</strong> {selected.agency || "Not available"}</p>
@@ -259,6 +303,7 @@ function Opportunities() {
                         <p>Select an opportunity to view its details.</p>
                     )}
                 </div>
+                )}
             </div>
         </div>
     );
